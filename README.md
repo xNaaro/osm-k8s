@@ -8,7 +8,6 @@ K8s deployment for Open Source MANO(OSM).
 some issues exists with kafka topics which makes OSM unusable for now.
 
 * Give some time for testing and contribute in you feel it ;)
-#test protected branch
 
 # Install minikube - KVM driver
 
