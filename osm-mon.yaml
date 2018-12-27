@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    osm-service: osm-mon
+  name: osm-mon
+spec:
+  ports:
+  - name: "8662"
+    port: 8662
+    targetPort: 8662
+  selector:
+    osm-service: osm-mon
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+data:
+  OS_NOTIFIER_URI: http://osm-mon:8662
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    osm-service: osm-mon-env
+  name: osm-mon-env
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    osm-service: osm-mon-db
+  name: osm-mon-db
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    osm-service: osm-mon
+  name: osm-mon
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        osm-service: osm-mon
+    spec:
+      containers:
+      - env:
+        - name: BROKER_URI
+          value: osm-kafka:9092
+        - name: MONGO_URI
+          value: mongodb://osm-mongo:27017
+        - name: DATABASE
+          value: sqlite:///app/database/mon_sqlite.db
+        - name: OS_NOTIFIER_URI
+          valueFrom:
+            configMapKeyRef:
+              key: OS_NOTIFIER_URI
+              name: osm-mon-env
+        image: opensourcemano/mon:latest
+        name: osm-mon
+        ports:
+        - containerPort: 8662
+        resources: {}
+        volumeMounts:
+        - mountPath: /app/database
+          name: osm-mon-db
+      restartPolicy: Always
+      volumes:
+      - name: osm-mon-db
+        persistentVolumeClaim:
+          claimName: osm-mon-db
+status: {}
+
