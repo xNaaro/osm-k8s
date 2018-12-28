@@ -1,15 +1,46 @@
-# Intro
+# Open Source MANO kubernetes deployment
 
 K8s deployment for Open Source MANO(OSM).
 
-#### Current state of development
+## Current state of development
 
 * Currently only deployed in All in one using minikube,
 some issues exists with kafka topics which makes OSM unusable for now.
+* Some bugs are present in the docker images, other things are hardcoded
+which makes the deployment kind of weird and not much configurable.
+* LCM and POl services are restarting in CrashLoopBackOff state.
 
-* Give some time for testing and contribute in you feel it ;)
+Give some time for testing and contribute in you feel it ;)
 
-# Install minikube - KVM driver
+## Architecture design discussion and items to be work
+
+Goal of this project is to deploy an OSM in HA multi-cluster within k8s.
+
+###Main requirements
+
+* Database replication (mongodb and mariadb)
+* MQ/data HA (zookeeper and kafka)
+* APIs active/active HA
+
+To achieve this goal is probably the best option to use already existing
+k8s deployments for kafka, mongodb,zookeeper and prometheus.
+
+Let do the experts in the area do their work, and we do our job to deploy OSM.
+
+### Work items
+
+* Fix docker images to be more configurable and less attached to Swarm deployment.
+  Others deployer will benefit from this
+* Healthcheck
+* Stateful deployment for data services
+* Service dependencies, wait for previous to be available with initContainers
+parameter
+* Some kind of script to configure a few parameters like passwords
+* Ability to configure different service types, as LB, NodePort, etc
+* Helm charts (Maybe?)
+
+## Quickstart k8s installation
+### Install minikube - KVM driver
 
 ```bash
 sudo usermod -a -G libvirt $(whoami)
@@ -29,31 +60,33 @@ sudo mv ./kompose /usr/local/bin/kompose
 minikube start --vm-driver kvm2 --memory 8096
 ```
 
-# Verify minikube
+### Verify minikube
 ```bash
 kubectl run hello-minikube --image=k8s.gcr.io/echoserver:1.10 --port=8080
 kubectl expose deployment hello-minikube --type=NodePort
 curl $(minikube service hello-minikube --url)
 ```
 
-# Required osm images
+## Open Source MANO deployment
+### Required osm images
 
-* docker pull wurstmeister/zookeeper:latest
-* docker pull wurstmeister/kafka
-* docker pull mongo
-* docker pull prom/prometheus
-* docker pull mariadb:10
-* docker pull opensourcemano/keystone
-* docker pull opensourcemano/lcm
-* docker pull opensourcemano/nbi
-* docker pull mysql:5
-* docker pull opensourcemano/ro
-* docker pull opensourcemano/mon
-* docker pull opensourcemano/pol
-* docker pull opensourcemano/light-ui
+* wurstmeister/zookeeper:latest
+* wurstmeister/kafka
+* mongo
+* prom/prometheus
+* mariadb:10
+* opensourcemano/keystone
+* opensourcemano/lcm
+* opensourcemano/nbi
+* mysql:5
+* opensourcemano/ro
+* opensourcemano/mon
+* opensourcemano/pol
+* opensourcemano/light-ui
 
 
-# Deploy OSM
+### Deploy OSM
+Deploy one by one, wait for the previous service to be available.
 ```bash
 kubectl apply -f osm-zookeeper.yaml
 kubectl apply -f osm-kafka.yaml
@@ -70,12 +103,24 @@ kubectl apply -f osm-pol.yaml
 kubectl apply -f osm-light-ui.yaml
 ```
 
-# Bonus point
-#### Create tunnel to service's IP to allow external traffic (when not using LB)
+### Web UI user password
+```bash
+admin:admin
+```
+
+### Bonus point
+##### Create tunnel to service's IP to allow external traffic (when not using LB)
 ```bash
 ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -L <local_port>:<service_ip>:<service_port>
 
 curl http://$(minikube ip):<local_port>
 ```
+
+## License
+
+Apache version 2
+
+## Contact information
+
 Feel free to reach me at ``dabarren@gmail.com`` or as ``egonzalez`` at OSM slack channel
 or at ```#openstack-kolla``` IRC channel at freenode.org
